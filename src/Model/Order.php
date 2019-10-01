@@ -130,7 +130,7 @@ class Order extends DataObject
 
     private static $summary_fields = [
         'Reference',
-        'Placed',
+        'Created',
         'Name',
         'LatestEmail',
         'Total',
