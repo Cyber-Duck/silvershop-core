@@ -1,3 +1,4 @@
+# This repository is forked to be used in the Bayanicare project. This should should not be used in the other projects.
 # SilverShop Module
 
 The SilverShop module aims to provide developers with a framework for building, and customising ecommerce-based projects.
