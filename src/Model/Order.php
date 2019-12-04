@@ -153,7 +153,7 @@ class Order extends DataObject
 
     private static $plural_name = 'Orders';
 
-    private static $default_sort = '"Placed" DESC, "Created" DESC';
+    private static $default_sort = '"Reference" DESC, "Placed" DESC, "Created" DESC';
 
     /**
      * Statuses for orders that have been placed.
