@@ -14,7 +14,9 @@ use SilverShop\Page\CheckoutPage;
 use SilverShop\ShopTools;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\Debug;
+use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\CheckboxSetField;
 use SilverStripe\Forms\DateField;
 use SilverStripe\Forms\DropdownField;
@@ -22,13 +24,16 @@ use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\Tab;
 use SilverStripe\Forms\TabSet;
+use SilverStripe\Forms\TextField;
 use SilverStripe\Omnipay\Extensions\Payable;
+use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\FieldType\DBCurrency;
 use SilverStripe\ORM\FieldType\DBDatetime;
 use SilverStripe\ORM\FieldType\DBEnum;
 use SilverStripe\ORM\Filters\GreaterThanFilter;
 use SilverStripe\ORM\Filters\LessThanFilter;
+use SilverStripe\ORM\Filters\SearchFilter;
 use SilverStripe\ORM\HasManyList;
 use SilverStripe\ORM\Search\SearchContext;
 use SilverStripe\ORM\UnsavedRelationList;
@@ -100,6 +105,7 @@ class Order extends DataObject
         'SeparateBillingAddress' => 'Boolean',
         // keep track of customer locale
         'Locale' => 'Locale',
+        'IsTest' => 'Boolean(0)',
     ];
 
     private static $has_one = [
@@ -135,6 +141,7 @@ class Order extends DataObject
         'LatestEmail',
         'Total',
         'StatusI18N',
+        'IsTest',
     ];
 
     private static $searchable_fields = [
@@ -146,6 +153,71 @@ class Order extends DataObject
             'field' => CheckboxSetField::class,
         ],
     ];
+
+    public function searchableFields()
+    {
+        $urlSegments = explode('/', Controller::curr()->getRequest()->getURL());
+        if ($urlSegments[1] != 'order-report') {
+            return parent::searchableFields();
+        }
+
+        return [
+            'Reference' => [
+                'filter' => 'PartialMatchFilter',
+                'title' => 'Reference',
+                'field' => TextField::class,
+            ],
+            'CardNr' => [
+                'filter' => 'PartialMatchFilter',
+                'title' => 'Card Nr',
+                'field' => TextField::class,
+            ],
+            'SerialNr' => [
+                'filter' => 'PartialMatchFilter',
+                'title' => 'Serial Nr',
+                'field' => TextField::class,
+            ],
+            'PlanName' => [
+                'filter' => 'PartialMatchFilter',
+                'title' => 'Plan Name',
+                'field' => TextField::class,
+            ],
+            'PlanSKU' => [
+                'filter' => 'PartialMatchFilter',
+                'title' => 'Plan SKU',
+                'field' => TextField::class,
+            ],
+            'Price' => [
+                'filter' => 'PartialMatchFilter',
+                'title' => 'Price',
+                'field' => TextField::class,
+            ],
+            'FirstName' => [
+                'filter' => 'PartialMatchFilter',
+                'title' => 'First Name',
+                'field' => TextField::class,
+            ],
+            'Surname' => [
+                'filter' => 'PartialMatchFilter',
+                'title' => 'First Name',
+                'field' => TextField::class,
+            ],
+            'Email' => [
+                'filter' => 'PartialMatchFilter',
+                'title' => 'Email',
+                'field' => TextField::class,
+            ],
+            'IsTest' => [
+                'filter' => 'ExactMatchFilter',
+                'title' => 'Test data',
+                'field' => DropdownField::create('IsTest')
+                    ->setSource(
+                        (ArrayList::create([ ['value' => 0, 'title' => 'No'], ['value' => 1, 'title' => 'Yes'] ]))->map('value', 'title')
+                    )
+                    ->setEmptyString('-- Any --')
+            ],
+        ];
+    }
 
     private static $table_name = 'SilverShop_Order';
 
@@ -301,6 +373,7 @@ class Order extends DataObject
         $fs = '<div class="field">';
         $fe = '</div>';
         $parts = array(
+            CheckboxField::create('IsTest', "Is test order?"),
             DropdownField::create('Status', $this->fieldLabel('Status'), self::get_order_status_options()),
             LiteralField::create('Customer', $fs . $this->renderWith('SilverShop\Admin\OrderAdmin_Customer') . $fe),
             LiteralField::create('Addresses', $fs . $this->renderWith('SilverShop\Admin\OrderAdmin_Addresses') . $fe),
@@ -350,7 +423,7 @@ class Order extends DataObject
         }, ARRAY_FILTER_USE_KEY);
 
         $fields->push(
-            // TODO: Allow filtering by multiple statuses
+        // TODO: Allow filtering by multiple statuses
             DropdownField::create('Status', $this->fieldLabel('Status'))
                 ->setSource($statusOptions)
                 ->setHasEmptyDefault(true)
@@ -533,14 +606,14 @@ class Order extends DataObject
 
         switch ($this->Status) {
             case 'Unpaid' :
-            return self::config()->cancel_before_payment;
+                return self::config()->cancel_before_payment;
             case 'Paid' :
-            return self::config()->cancel_before_processing;
+                return self::config()->cancel_before_processing;
             case 'Processing' :
-            return self::config()->cancel_before_sending;
+                return self::config()->cancel_before_sending;
             case 'Sent' :
             case 'Complete' :
-            return self::config()->cancel_after_sending;
+                return self::config()->cancel_after_sending;
         }
         return false;
     }
@@ -940,5 +1013,24 @@ class Order extends DataObject
         }
 
         return $entities;
+    }
+
+    public function defaultSearchFilters()
+    {
+        foreach ($this->searchableFields() as $name => $spec) {
+            if (in_array($name, [ 'CardNr', 'SerialNr', 'PlanName', 'PlanSKU' ])) {
+                continue;
+            }
+
+            if (empty($spec['filter'])) {
+                $filters[$name] = 'PartialMatchFilter';
+            } elseif ($spec['filter'] instanceof SearchFilter) {
+                $filters[$name] = $spec['filter'];
+            } else {
+                $filters[$name] = Injector::inst()->create($spec['filter'], $name);
+            }
+        }
+
+        return $filters;
     }
 }
