@@ -94,7 +94,7 @@ class Order extends DataObject
         'ReceiptSent' => 'Datetime', //receipt emailed to customer
         'Printed' => 'Datetime',
         'Dispatched' => 'Datetime', //products have been sent to customer
-        'Status' => "Enum('Unpaid,Paid,Processing,Sent,Complete,AdminCancelled,MemberCancelled,Cart','Cart')",
+        'Status' => "Enum('Unpaid,Paid,Processing,Pending,Sent,Complete,AdminCancelled,MemberCancelled,Cart','Cart')",
         //customer (for guest orders)
         'FirstName' => 'Varchar',
         'Surname' => 'Varchar',
@@ -236,6 +236,7 @@ class Order extends DataObject
         'Paid',
         'Unpaid',
         'Processing',
+        'Pending',
         'Sent',
         'Complete',
         'MemberCancelled',
@@ -251,6 +252,7 @@ class Order extends DataObject
         'Cart',
         'Unpaid',
         'Processing',
+        'Pending',
         'Sent',
     ];
 
@@ -614,6 +616,8 @@ class Order extends DataObject
             case 'Sent' :
             case 'Complete' :
                 return self::config()->cancel_after_sending;
+            case 'Pending':
+                return true;
         }
         return false;
     }
