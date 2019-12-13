@@ -94,7 +94,7 @@ class Order extends DataObject
         'ReceiptSent' => 'Datetime', //receipt emailed to customer
         'Printed' => 'Datetime',
         'Dispatched' => 'Datetime', //products have been sent to customer
-        'Status' => "Enum('Unpaid,Paid,Processing,Pending,Sent,Complete,AdminCancelled,MemberCancelled,Cart','Cart')",
+        'Status' => "Enum('Unpaid,Paid,Processing,Sent,Complete,AdminCancelled,MemberCancelled,Cart','Cart')",
         //customer (for guest orders)
         'FirstName' => 'Varchar',
         'Surname' => 'Varchar',
@@ -105,7 +105,7 @@ class Order extends DataObject
         'SeparateBillingAddress' => 'Boolean',
         // keep track of customer locale
         'Locale' => 'Locale',
-        'IsTest' => 'Boolean(0)',
+        'IsTest' => 'Varchar(4)',
     ];
 
     private static $has_one = [
@@ -122,6 +122,7 @@ class Order extends DataObject
 
     private static $defaults = [
         'Status' => 'Cart',
+        'IsTest' => 'No',
     ];
 
     private static $casting = [
@@ -212,7 +213,7 @@ class Order extends DataObject
                 'title' => 'Test data',
                 'field' => DropdownField::create('IsTest')
                     ->setSource(
-                        (ArrayList::create([ ['value' => 0, 'title' => 'No'], ['value' => 1, 'title' => 'Yes'] ]))->map('value', 'title')
+                        (ArrayList::create([ ['value' => 'No', 'title' => 'No'], ['value' => 'Yes', 'title' => 'Yes'] ]))->map('value', 'title')
                     )
                     ->setEmptyString('-- Any --')
             ],
@@ -236,7 +237,6 @@ class Order extends DataObject
         'Paid',
         'Unpaid',
         'Processing',
-        'Pending',
         'Sent',
         'Complete',
         'MemberCancelled',
@@ -252,7 +252,6 @@ class Order extends DataObject
         'Cart',
         'Unpaid',
         'Processing',
-        'Pending',
         'Sent',
     ];
 
@@ -616,8 +615,6 @@ class Order extends DataObject
             case 'Sent' :
             case 'Complete' :
                 return self::config()->cancel_after_sending;
-            case 'Pending':
-                return true;
         }
         return false;
     }
