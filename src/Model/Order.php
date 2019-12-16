@@ -105,7 +105,7 @@ class Order extends DataObject
         'SeparateBillingAddress' => 'Boolean',
         // keep track of customer locale
         'Locale' => 'Locale',
-        'IsTest' => 'Varchar(4)',
+        'IsTest' => 'Boolean(0)',
     ];
 
     private static $has_one = [
@@ -122,7 +122,6 @@ class Order extends DataObject
 
     private static $defaults = [
         'Status' => 'Cart',
-        'IsTest' => 'No',
     ];
 
     private static $casting = [
@@ -138,6 +137,7 @@ class Order extends DataObject
     private static $summary_fields = [
         'Reference',
         'Created',
+        'Placed',
         'Name',
         'LatestEmail',
         'Total',
@@ -213,7 +213,7 @@ class Order extends DataObject
                 'title' => 'Test data',
                 'field' => DropdownField::create('IsTest')
                     ->setSource(
-                        (ArrayList::create([ ['value' => 'No', 'title' => 'No'], ['value' => 'Yes', 'title' => 'Yes'] ]))->map('value', 'title')
+                        (ArrayList::create([ ['value' => 0, 'title' => 'No'], ['value' => 1, 'title' => 'Yes'] ]))->map('value', 'title')
                     )
                     ->setEmptyString('-- Any --')
             ],
