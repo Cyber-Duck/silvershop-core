@@ -73,6 +73,7 @@ use SilverStripe\Security\Security;
  */
 class Order extends DataObject
 {
+    const ORDER_REPORT_URL_SEGMENT = 'order-report';
     /**
      * Status codes and what they mean:
      *
@@ -158,7 +159,7 @@ class Order extends DataObject
     public function searchableFields()
     {
         $urlSegments = explode('/', Controller::curr()->getRequest()->getURL());
-        if ($urlSegments[1] != 'order-report') {
+        if ($urlSegments[1] != static::ORDER_REPORT_URL_SEGMENT) {
             return parent::searchableFields();
         }
 
@@ -216,6 +217,16 @@ class Order extends DataObject
                         (ArrayList::create([ ['value' => 0, 'title' => 'No'], ['value' => 1, 'title' => 'Yes'] ]))->map('value', 'title')
                     )
                     ->setEmptyString('-- Any --')
+            ],
+            'DateFrom' => [
+                'filter' => 'ExactMatchFilter',
+                'title' => 'Date from',
+                'field' => DateField::create('DateFrom')
+            ],
+            'DateTo' => [
+                'filter' => 'ExactMatchFilter',
+                'title' => 'Date to',
+                'field' => DateField::create('DateTo')
             ],
         ];
     }
@@ -415,6 +426,8 @@ class Order extends DataObject
      */
     public function getDefaultSearchContext()
     {
+        $urlSegments = explode('/', Controller::curr()->getRequest()->getURL());
+
         $context = parent::getDefaultSearchContext();
         $fields = $context->getFields();
 
@@ -430,21 +443,25 @@ class Order extends DataObject
                 ->setHasEmptyDefault(true)
         );
 
-        // add date range filtering
-        $fields->insertBefore(
-            'Status',
-            DateField::create('DateFrom', _t(__CLASS__ . '.DateFrom', 'Date from'))
-        );
+        if ($urlSegments[1] != static::ORDER_REPORT_URL_SEGMENT) {
+            // add date range filtering
+            $fields->insertBefore(
+                'Status',
+                DateField::create('DateFrom', _t(__CLASS__ . '.DateFrom', 'Date from'))
+            );
 
-        $fields->insertBefore(
-            'Status',
-            DateField::create('DateTo', _t(__CLASS__ . '.DateTo', 'Date to'))
-        );
+            $fields->insertBefore(
+                'Status',
+                DateField::create('DateTo', _t(__CLASS__ . '.DateTo', 'Date to'))
+            );
+        }
 
         // get the array, to maniplulate name, and fullname seperately
         $filters = $context->getFilters();
-        $filters['DateFrom'] = GreaterThanFilter::create('Placed');
-        $filters['DateTo'] = LessThanFilter::create('Placed');
+        if ($urlSegments[1] != static::ORDER_REPORT_URL_SEGMENT) {
+            $filters['DateFrom'] = GreaterThanFilter::create('Placed');
+            $filters['DateTo'] = LessThanFilter::create('Placed');
+        }
 
         // filter customer need to use a bunch of different sources
         $filters['Name'] = MultiFieldPartialMatchFilter::create(
@@ -1018,8 +1035,15 @@ class Order extends DataObject
 
     public function defaultSearchFilters()
     {
+        $urlSegments = explode('/', Controller::curr()->getRequest()->getURL());
+        $fieldsToIgnore = [ 'CardNr', 'SerialNr', 'PlanName', 'PlanSKU' ];
+        if ($urlSegments[1] == static::ORDER_REPORT_URL_SEGMENT) {
+            $fieldsToIgnore[] = 'DateFrom';
+            $fieldsToIgnore[] = 'DateTo';
+        }
+
         foreach ($this->searchableFields() as $name => $spec) {
-            if (in_array($name, [ 'CardNr', 'SerialNr', 'PlanName', 'PlanSKU' ])) {
+            if (in_array($name, $fieldsToIgnore)) {
                 continue;
             }
 
