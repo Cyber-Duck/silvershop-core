@@ -95,7 +95,7 @@ class Order extends DataObject
         'ReceiptSent' => 'Datetime', //receipt emailed to customer
         'Printed' => 'Datetime',
         'Dispatched' => 'Datetime', //products have been sent to customer
-        'Status' => "Enum('Unpaid,Paid,Processing,Sent,Complete,AdminCancelled,MemberCancelled,Cart','Cart')",
+        'Status' => "Enum('Unpaid,Paid,Pending,Processing,Sent,Complete,AdminCancelled,MemberCancelled,Cart','Cart')",
         //customer (for guest orders)
         'FirstName' => 'Varchar',
         'Surname' => 'Varchar',
